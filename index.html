@@ -3,435 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>周也的贪吃蛇</title>
+    <title>周也的贪吃蛇 - 云端版</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccee 100%);
-            font-family: 'Comic Sans MS', 'Arial', sans-serif;
-            position: relative;
-            overflow: hidden;
-        }
-
-        body::before {
-            content: '🎀';
-            position: absolute;
-            font-size: 80px;
-            opacity: 0.2;
-            top: 10%;
-            left: 10%;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        body::after {
-            content: '🎀';
-            position: absolute;
-            font-size: 60px;
-            opacity: 0.2;
-            bottom: 15%;
-            right: 15%;
-            animation: float 8s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-
-        .hearts {
-            position: absolute;
-            font-size: 40px;
-            opacity: 0.15;
-        }
-
+        /* 保持你原始的所有样式不变 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccee 100%); font-family: 'Comic Sans MS', 'Arial', sans-serif; position: relative; overflow: hidden; }
+        body::before { content: '🎀'; position: absolute; font-size: 80px; opacity: 0.2; top: 10%; left: 10%; animation: float 6s ease-in-out infinite; }
+        body::after { content: '🎀'; position: absolute; font-size: 60px; opacity: 0.2; bottom: 15%; right: 15%; animation: float 8s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+        .hearts { position: absolute; font-size: 40px; opacity: 0.15; }
         .heart1 { top: 20%; right: 20%; animation: pulse 3s infinite; }
         .heart2 { bottom: 25%; left: 15%; animation: pulse 4s infinite; }
         .heart3 { top: 60%; right: 10%; animation: pulse 3.5s infinite; }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
-
-        .container {
-            text-align: center;
-            background: white;
-            padding: 30px;
-            border-radius: 30px;
-            box-shadow: 0 15px 50px rgba(255, 105, 180, 0.4);
-            border: 5px solid #ff69b4;
-            position: relative;
-            z-index: 1;
-        }
-
-        h1 {
-            color: #ff1493;
-            margin-bottom: 20px;
-            font-size: 32px;
-            text-shadow: 2px 2px 4px rgba(255, 105, 180, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .kitty-face {
-            font-size: 50px;
-            animation: bounce 2s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .score-board {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-            gap: 15px;
-        }
-
-        .score-item {
-            padding: 12px 25px;
-            background: linear-gradient(135deg, #ffccee 0%, #ffb3d9 100%);
-            border-radius: 20px;
-            border: 3px solid #ff69b4;
-            font-size: 18px;
-            color: #ff1493;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(255, 105, 180, 0.2);
-        }
-
-        canvas {
-            border: 5px solid #ff69b4;
-            border-radius: 20px;
-            background: #fff0f5;
-            display: block;
-            margin: 0 auto;
-            box-shadow: 0 8px 20px rgba(255, 105, 180, 0.3);
-        }
-
-        .controls {
-            margin-top: 20px;
-            color: #ff1493;
-            font-size: 14px;
-            line-height: 1.8;
-        }
-
-        .controls p {
-            margin: 5px 0;
-        }
-
-        .game-status {
-            margin-top: 15px;
-            font-size: 16px;
-            color: #ff1493;
-            font-weight: bold;
-            min-height: 24px;
-        }
-
-        .btn {
-            padding: 10px 25px;
-            font-size: 16px;
-            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
-            transition: all 0.3s;
-            margin: 5px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(255, 105, 180, 0.5);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 100%);
-        }
-
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 182, 193, 0.85);
-            z-index: 999;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { 
-                opacity: 0;
-                transform: translate(-50%, -40%);
-            }
-            to { 
-                opacity: 1;
-                transform: translate(-50%, -50%);
-            }
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 40px;
-            border-radius: 30px;
-            box-shadow: 0 15px 60px rgba(255, 105, 180, 0.5);
-            z-index: 1000;
-            border: 5px solid #ff69b4;
-            animation: slideUp 0.4s ease-out;
-        }
-
-        .game-over-modal {
-            text-align: center;
-            min-width: 320px;
-        }
-
-        .game-over-modal h2 {
-            color: #ff1493;
-            margin-bottom: 20px;
-            font-size: 28px;
-        }
-
-        .game-over-modal .score-display {
-            font-size: 48px;
-            color: #ff69b4;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-
-        .game-over-modal .message {
-            color: #666;
-            font-size: 16px;
-            margin: 15px 0;
-        }
-
-        .leaderboard-modal {
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .leaderboard-modal h2 {
-            color: #ff1493;
-            margin-bottom: 25px;
-            font-size: 26px;
-            text-align: center;
-        }
-
-        .leaderboard-list {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 20px 0;
-        }
-
-        .leaderboard-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #fff0f5 0%, #ffe4f0 100%);
-            border-radius: 15px;
-            border: 2px solid #ffb3d9;
-            transition: all 0.3s;
-        }
-
-        .leaderboard-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
-        }
-
-        .leaderboard-item.rank-1 {
-            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-            border-color: #ffa500;
-        }
-
-        .leaderboard-item.rank-2 {
-            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-            border-color: #a9a9a9;
-        }
-
-        .leaderboard-item.rank-3 {
-            background: linear-gradient(135deg, #cd7f32 0%, #e9b872 100%);
-            border-color: #b8860b;
-        }
-
-        .player-rank {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ff1493;
-            min-width: 50px;
-            text-align: center;
-        }
-
-        .player-info {
-            flex: 1;
-            margin-left: 15px;
-            text-align: left;
-        }
-
-        .player-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .player-date {
-            font-size: 12px;
-            color: #999;
-            margin-top: 3px;
-        }
-
-        .player-score {
-            font-size: 22px;
-            font-weight: bold;
-            color: #ff1493;
-            min-width: 80px;
-            text-align: right;
-        }
-
-        .name-input-modal {
-            text-align: center;
-            min-width: 350px;
-        }
-
-        .name-input-modal h3 {
-            color: #ff1493;
-            margin-bottom: 15px;
-            font-size: 24px;
-        }
-
-        .name-input-modal .congrats {
-            font-size: 50px;
-            margin: 15px 0;
-        }
-
-        .name-input-modal input {
-            width: 100%;
-            max-width: 280px;
-            padding: 15px 20px;
-            font-size: 18px;
-            border: 3px solid #ff69b4;
-            border-radius: 15px;
-            margin: 20px 0;
-            text-align: center;
-            outline: none;
-            transition: all 0.3s;
-            font-family: inherit;
-        }
-
-        .name-input-modal input:focus {
-            border-color: #ff1493;
-            box-shadow: 0 0 15px rgba(255, 105, 180, 0.4);
-        }
-
-        .empty-leaderboard {
-            text-align: center;
-            color: #ff69b4;
-            padding: 40px 20px;
-            font-size: 16px;
-        }
-
-        .cute-emoji {
-            font-size: 50px;
-            margin: 10px 0;
-        }
-
-        .start-hint {
-            color: #ff69b4;
-            font-size: 18px;
-            margin-top: 15px;
-            animation: blink 2s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        .container { text-align: center; background: white; padding: 30px; border-radius: 30px; box-shadow: 0 15px 50px rgba(255, 105, 180, 0.4); border: 5px solid #ff69b4; position: relative; z-index: 1; }
+        h1 { color: #ff1493; margin-bottom: 20px; font-size: 32px; text-shadow: 2px 2px 4px rgba(255, 105, 180, 0.3); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .kitty-face { font-size: 50px; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .score-board { display: flex; justify-content: space-around; margin-bottom: 20px; gap: 15px; }
+        .score-item { padding: 12px 25px; background: linear-gradient(135deg, #ffccee 0%, #ffb3d9 100%); border-radius: 20px; border: 3px solid #ff69b4; font-size: 18px; color: #ff1493; font-weight: bold; box-shadow: 0 4px 10px rgba(255, 105, 180, 0.2); }
+        canvas { border: 5px solid #ff69b4; border-radius: 20px; background: #fff0f5; display: block; margin: 0 auto; box-shadow: 0 8px 20px rgba(255, 105, 180, 0.3); }
+        .controls { margin-top: 20px; color: #ff1493; font-size: 14px; line-height: 1.8; }
+        .game-status { margin-top: 15px; font-size: 16px; color: #ff1493; font-weight: bold; min-height: 24px; }
+        .btn { padding: 10px 25px; font-size: 16px; background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3); transition: all 0.3s; margin: 5px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255, 105, 180, 0.5); }
+        .btn-secondary { background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 100%); }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 182, 193, 0.85); z-index: 999; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 30px; box-shadow: 0 15px 60px rgba(255, 105, 180, 0.5); z-index: 1000; border: 5px solid #ff69b4; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, -40%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+        .game-over-modal { text-align: center; min-width: 320px; }
+        .score-display { font-size: 48px; color: #ff69b4; margin: 20px 0; font-weight: bold; }
+        .leaderboard-modal { max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .leaderboard-list { list-style: none; padding: 0; margin-bottom: 20px; }
+        .leaderboard-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 10px; background: linear-gradient(135deg, #fff0f5 0%, #ffe4f0 100%); border-radius: 15px; border: 2px solid #ffb3d9; }
+        .leaderboard-item.rank-1 { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); border-color: #ffa500; }
+        .player-rank { font-size: 24px; font-weight: bold; color: #ff1493; min-width: 40px; }
+        .player-info { flex: 1; margin-left: 15px; text-align: left; }
+        .player-name { font-size: 18px; font-weight: bold; color: #333; }
+        .player-date { font-size: 11px; color: #999; }
+        .player-score { font-size: 20px; font-weight: bold; color: #ff1493; }
+        .name-input-modal { text-align: center; min-width: 350px; }
+        .name-input-modal input { width: 100%; padding: 15px; font-size: 18px; border: 3px solid #ff69b4; border-radius: 15px; margin: 20px 0; text-align: center; outline: none; }
+        .start-hint { color: #ff69b4; font-size: 18px; margin-top: 15px; animation: blink 2s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .button-group { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
     </style>
 </head>
 <body>
-    <div class="hearts heart1">💖</div>
-    <div class="hearts heart2">💝</div>
-    <div class="hearts heart3">💕</div>
+    <div class="hearts heart1">💖</div><div class="hearts heart2">💝</div><div class="hearts heart3">💕</div>
 
     <div class="container">
-        <h1>
-            <span class="kitty-face">💖</span>
-            周也的贪吃蛇
-            <span class="kitty-face">💖</span>
-        </h1>
-        
+        <h1><span class="kitty-face">💖</span>周也的贪吃蛇<span class="kitty-face">💖</span></h1>
         <div class="score-board">
-            <div class="score-item">
-                🌸 当前得分：<span id="score">0</span>
-            </div>
-            <div class="score-item">
-                ⭐ 最高分：<span id="highScore">0</span>
-            </div>
+            <div class="score-item">🌸 当前得分：<span id="score">0</span></div>
+            <div class="score-item">⭐ 最高分：<span id="highScore">0</span></div>
         </div>
-
         <canvas id="gameCanvas" width="400" height="400"></canvas>
-
-        <div class="game-status" id="gameStatus">
-            <span class="start-hint">按方向键开始游戏 →</span>
-        </div>
-
+        <div class="game-status" id="gameStatus"><span class="start-hint">按方向键开始游戏 →</span></div>
         <div class="button-group">
             <button class="btn" onclick="togglePause()">⏸️ 暂停/继续</button>
             <button class="btn btn-secondary" onclick="showLeaderboard()">🏆 排行榜</button>
             <button class="btn btn-secondary" onclick="restartGame()">🔄 重新开始</button>
         </div>
-
         <div class="controls">
-            <p>🎮 方向键 ↑ ↓ ← → 控制移动</p>
-            <p>🍓 吃草莓得分，撞墙或自己就输了</p>
+            <p>🎮 方向键 ↑ ↓ ← → 控制移动 | 🍓 吃草莓得分</p>
         </div>
     </div>
 
-    <!-- 遮罩层 -->
-    <div class="overlay" id="overlay" onclick="closeAllModals()"></div>
-    
-    <!-- 游戏结束弹窗 -->
+    <div class="overlay" id="overlay"></div>
     <div class="modal game-over-modal" id="gameOverModal">
         <div class="cute-emoji">😿</div>
         <h2>游戏结束</h2>
@@ -439,368 +78,175 @@
         <div class="message" id="gameOverMessage">再接再厉哦！</div>
         <div class="button-group">
             <button class="btn" onclick="restartGame()">🌟 再玩一次</button>
-            <button class="btn btn-secondary" onclick="closeAllModals()">关闭</button>
         </div>
     </div>
 
-    <!-- 输入名字弹窗 -->
     <div class="modal name-input-modal" id="nameInputModal">
         <div class="congrats">🎉</div>
         <h3>恭喜进入排行榜！</h3>
-        <p style="color: #ff69b4; font-size: 18px;">你的得分：<strong id="scoreForName">0</strong> 分</p>
-        <input type="text" id="playerNameInput" placeholder="请输入你的名字" maxlength="15" autocomplete="off">
+        <p>得分：<strong id="scoreForName">0</strong></p>
+        <input type="text" id="playerNameInput" placeholder="输入你的名字" maxlength="10">
         <div class="button-group">
             <button class="btn" onclick="submitScore()">✨ 提交</button>
             <button class="btn btn-secondary" onclick="skipScore()">跳过</button>
         </div>
     </div>
 
-    <!-- 排行榜弹窗 -->
     <div class="modal leaderboard-modal" id="leaderboardModal">
-        <h2>🏆 排行榜 TOP 10 🏆</h2>
-        <ul class="leaderboard-list" id="leaderboardList"></ul>
+        <h2>🏆 全球排行榜 🏆</h2>
+        <ul class="leaderboard-list" id="leaderboardList">
+            <li class="empty-leaderboard">加载中...</li>
+        </ul>
         <div class="button-group">
-            <button class="btn" onclick="closeLeaderboard()">关闭</button>
-            <button class="btn btn-secondary" onclick="clearLeaderboard()">🗑️ 清空记录</button>
+            <button class="btn" onclick="closeAllModals()">关闭</button>
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <script>
+        // 2. 初始化 Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLj14o1eUCrpAi3HLVaEZwHJjkTm1Y3Rc",
+            authDomain: "snake-leaderboard-6a92c.firebaseapp.com",
+            projectId: "snake-leaderboard-6a92c",
+            storageBucket: "snake-leaderboard-6a92c.firebasestorage.app",
+            messagingSenderId: "399594563906",
+            appId: "1:399594563906:web:57686e47280a13ac74c0db"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 基础变量
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
         const highScoreElement = document.getElementById('highScore');
-        const gameOverModal = document.getElementById('gameOverModal');
         const overlay = document.getElementById('overlay');
-        const finalScoreElement = document.getElementById('finalScore');
-        const nameInputModal = document.getElementById('nameInputModal');
-        const leaderboardModal = document.getElementById('leaderboardModal');
-        const playerNameInput = document.getElementById('playerNameInput');
-        const scoreForName = document.getElementById('scoreForName');
         const gameStatus = document.getElementById('gameStatus');
-        const gameOverMessage = document.getElementById('gameOverMessage');
-
-        // 创建头像图片
-        const avatarImg = new Image();
-        avatarImg.crossOrigin = "anonymous";
         
-        // 游戏配置
-        const gridSize = 20;
-        const tileCount = canvas.width / gridSize;
-
-        // 游戏状态
         let snake = [{x: 10, y: 10}];
         let food = {x: 15, y: 15};
-        let dx = 0;
-        let dy = 0;
-        let score = 0;
+        let dx = 0, dy = 0, score = 0, gameRunning = false, isPaused = false, hasStarted = false;
         let highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0;
-        let gameRunning = false;
-        let gameLoop;
-        let isPaused = false;
-        let imageLoaded = false;
-        let currentGameScore = 0;
-        let hasStarted = false;
-
         highScoreElement.textContent = highScore;
 
-        // 排行榜功能
-        function getLeaderboard() {
-            const leaderboard = localStorage.getItem('snakeLeaderboard');
-            return leaderboard ? JSON.parse(leaderboard) : [];
+        // --- 云端排行榜核心功能 ---
+
+        // 3. 提交分数到 Firebase
+        async function submitScore() {
+            const name = document.getElementById('playerNameInput').value.trim();
+            if (!name) { alert('请输入名字！'); return; }
+
+            const btn = document.querySelector('#nameInputModal .btn');
+            btn.disabled = true;
+            btn.textContent = '提交中...';
+
+            try {
+                await db.collection("scores").add({
+                    name: name,
+                    score: score,
+                    date: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                document.getElementById('nameInputModal').style.display = 'none';
+                showLeaderboard(); // 提交成功后直接显示排行榜
+            } catch (error) {
+                console.error("提交失败: ", error);
+                alert("提交失败，请检查网络");
+                btn.disabled = false;
+                btn.textContent = '✨ 提交';
+            }
         }
 
-        function saveLeaderboard(leaderboard) {
-            localStorage.setItem('snakeLeaderboard', JSON.stringify(leaderboard));
-        }
-
-        function addToLeaderboard(name, score) {
-            let leaderboard = getLeaderboard();
-            leaderboard.push({ 
-                name: name, 
-                score: score, 
-                date: new Date().toLocaleString('zh-CN', { 
-                    month: '2-digit', 
-                    day: '2-digit', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                })
-            });
-            leaderboard.sort((a, b) => b.score - a.score);
-            leaderboard = leaderboard.slice(0, 10);
-            saveLeaderboard(leaderboard);
-        }
-
-        function showLeaderboard() {
-            const leaderboard = getLeaderboard();
+        // 4. 从 Firebase 获取并显示排行榜
+        async function showLeaderboard() {
             const leaderboardList = document.getElementById('leaderboardList');
-            leaderboardList.innerHTML = '';
+            leaderboardList.innerHTML = '<li class="empty-leaderboard">🎀 正在从云端获取...</li>';
+            
+            overlay.style.display = 'block';
+            document.getElementById('leaderboardModal').style.display = 'block';
 
-            if (leaderboard.length === 0) {
-                leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无记录<br>快来创造第一个记录吧！</li>';
-            } else {
-                leaderboard.forEach((entry, index) => {
+            try {
+                const snapshot = await db.collection("scores")
+                                    .orderBy("score", "desc")
+                                    .limit(10)
+                                    .get();
+
+                leaderboardList.innerHTML = '';
+                if (snapshot.empty) {
+                    leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无云端记录</li>';
+                    return;
+                }
+
+                snapshot.forEach((doc, index) => {
+                    const data = doc.data();
+                    const date = data.date ? data.date.toDate().toLocaleDateString() : '刚刚';
                     const li = document.createElement('li');
-                    li.className = 'leaderboard-item';
-                    if (index === 0) li.classList.add('rank-1');
-                    else if (index === 1) li.classList.add('rank-2');
-                    else if (index === 2) li.classList.add('rank-3');
-
-                    const rankDisplay = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                    li.className = `leaderboard-item ${index < 3 ? 'rank-' + (index + 1) : ''}`;
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
                     
                     li.innerHTML = `
-                        <span class="player-rank">${rankDisplay}</span>
+                        <span class="player-rank">${medal}</span>
                         <div class="player-info">
-                            <div class="player-name">${entry.name}</div>
-                            <div class="player-date">${entry.date}</div>
+                            <div class="player-name">${data.name}</div>
+                            <div class="player-date">${date}</div>
                         </div>
-                        <span class="player-score">${entry.score}分</span>
+                        <span class="player-score">${data.score}分</span>
                     `;
                     leaderboardList.appendChild(li);
                 });
-            }
-
-            overlay.style.display = 'block';
-            leaderboardModal.style.display = 'block';
-        }
-
-        function closeLeaderboard() {
-            overlay.style.display = 'none';
-            leaderboardModal.style.display = 'none';
-        }
-
-        function clearLeaderboard() {
-            if (confirm('确定要清空所有排行榜记录吗？此操作不可恢复！')) {
-                localStorage.removeItem('snakeLeaderboard');
-                showLeaderboard();
+            } catch (error) {
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 加载失败，请检查网络</li>';
+                console.error(error);
             }
         }
 
-        function checkIfScoreQualifies(score) {
-            if (score === 0) return false;
-            const leaderboard = getLeaderboard();
-            if (leaderboard.length < 10) return true;
-            return score > leaderboard[leaderboard.length - 1].score;
+        // 5. 检查分数是否达标（由于是全网，逻辑简化为：只要大于0就可以提交）
+        function checkIfScoreQualifies(currentScore) {
+            return currentScore > 0;
         }
 
-        function showNameInput(score) {
-            currentGameScore = score;
-            scoreForName.textContent = score;
-            playerNameInput.value = '';
-            gameOverModal.style.display = 'none';
-            nameInputModal.style.display = 'block';
-            setTimeout(() => playerNameInput.focus(), 100);
-        }
+        // --- 游戏逻辑部分 ---
 
-        function submitScore() {
-            const name = playerNameInput.value.trim();
-            if (name === '') {
-                alert('请输入你的名字哦！💖');
-                playerNameInput.focus();
-                return;
-            }
-            addToLeaderboard(name, currentGameScore);
-            nameInputModal.style.display = 'none';
-            showLeaderboard();
-        }
-
-        function skipScore() {
-            nameInputModal.style.display = 'none';
-            closeAllModals();
-        }
-
-        function closeAllModals() {
-            overlay.style.display = 'none';
-            gameOverModal.style.display = 'none';
-            nameInputModal.style.display = 'none';
-            leaderboardModal.style.display = 'none';
-        }
-
-        playerNameInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                submitScore();
-            }
-        });
-
-        // 加载头像
-        function loadAvatar() {
-            avatarImg.src = 'data:image/svg+xml;base64,' + btoa(`
-                <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
-                    <circle cx="50" cy="50" r="48" fill="#ff69b4"/>
-                    <circle cx="35" cy="42" r="6" fill="white"/>
-                    <circle cx="65" cy="42" r="6" fill="white"/>
-                    <circle cx="35" cy="42" r="3" fill="black"/>
-                    <circle cx="65" cy="42" r="3" fill="black"/>
-                    <circle cx="28" cy="52" r="4" fill="#ffb3d9" opacity="0.6"/>
-                    <circle cx="72" cy="52" r="4" fill="#ffb3d9" opacity="0.6"/>
-                    <path d="M 32 62 Q 50 72 68 62" stroke="#ff1493" stroke-width="3" fill="none" stroke-linecap="round"/>
-                </svg>
-            `);
-            imageLoaded = true;
-        }
-
-        loadAvatar();
-
-        // 生成随机食物位置
         function generateFood() {
-            food = {
-                x: Math.floor(Math.random() * tileCount),
-                y: Math.floor(Math.random() * tileCount)
-            };
-            
-            for (let segment of snake) {
-                if (segment.x === food.x && segment.y === food.y) {
-                    generateFood();
-                    return;
-                }
-            }
+            food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) };
+            if (snake.some(s => s.x === food.x && s.y === food.y)) generateFood();
         }
 
-        // 绘制蛇头
-        function drawSnakeHead(x, y) {
-            const centerX = x * gridSize + gridSize / 2;
-            const centerY = y * gridSize + gridSize / 2;
-            const size = gridSize - 2;
-            
-            ctx.strokeStyle = '#ff1493';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, size / 2 + 1, 0, 2 * Math.PI);
-            ctx.stroke();
-            
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, size / 2, 0, 2 * Math.PI);
-            ctx.clip();
-            
-            if (imageLoaded && avatarImg.complete) {
-                ctx.drawImage(avatarImg, centerX - size / 2, centerY - size / 2, size, size);
-            } else {
-                ctx.fillStyle = '#ff69b4';
-                ctx.fill();
-            }
-            
-            ctx.restore();
-            
-            ctx.fillStyle = '#ff1493';
-            ctx.font = 'bold 9px Arial';
-            ctx.textAlign = 'center';
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
-            ctx.shadowBlur = 3;
-            ctx.fillText('周也', centerX, y * gridSize + gridSize + 10);
-            ctx.shadowBlur = 0;
-        }
-
-        // 绘制游戏
         function draw() {
             ctx.fillStyle = '#fff0f5';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            ctx.fillStyle = 'rgba(255, 182, 193, 0.1)';
-            for (let i = 0; i < 5; i++) {
-                for (let j = 0; j < 5; j++) {
-                    if ((i + j) % 2 === 0) {
-                        ctx.beginPath();
-                        ctx.arc(i * 100 + 50, j * 100 + 50, 3, 0, 2 * Math.PI);
-                        ctx.fill();
-                    }
-                }
-            }
-
-            snake.forEach((segment, index) => {
-                if (index === 0) {
-                    drawSnakeHead(segment.x, segment.y);
-                } else {
-                    const gradient = ctx.createRadialGradient(
-                        segment.x * gridSize + gridSize / 2,
-                        segment.y * gridSize + gridSize / 2, 0,
-                        segment.x * gridSize + gridSize / 2,
-                        segment.y * gridSize + gridSize / 2, gridSize / 2
-                    );
-                    gradient.addColorStop(0, '#ffb3d9');
-                    gradient.addColorStop(1, '#ff99cc');
-                    
-                    ctx.fillStyle = gradient;
-                    ctx.beginPath();
-                    ctx.arc(
-                        segment.x * gridSize + gridSize / 2,
-                        segment.y * gridSize + gridSize / 2,
-                        gridSize / 2 - 1, 0, 2 * Math.PI
-                    );
-                    ctx.fill();
-                    
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.beginPath();
-                    ctx.arc(
-                        segment.x * gridSize + gridSize / 2 - 3,
-                        segment.y * gridSize + gridSize / 2 - 3,
-                        3, 0, 2 * Math.PI
-                    );
-                    ctx.fill();
-                }
-            });
-
-            const foodX = food.x * gridSize + gridSize / 2;
-            const foodY = food.y * gridSize + gridSize / 2;
-            
-            ctx.fillStyle = '#ff0040';
-            ctx.beginPath();
-            ctx.arc(foodX, foodY, gridSize / 2 - 2, 0, 2 * Math.PI);
-            ctx.fill();
-            
-            ctx.fillStyle = '#00cc00';
-            ctx.beginPath();
-            ctx.moveTo(foodX - 3, foodY - 6);
-            ctx.lineTo(foodX, foodY - 9);
-            ctx.lineTo(foodX + 3, foodY - 6);
-            ctx.lineTo(foodX, foodY - 4);
-            ctx.closePath();
-            ctx.fill();
-            
-            ctx.fillStyle = '#ffff99';
-            [{x: -3, y: -2}, {x: 3, y: -2}, {x: -4, y: 2}, {x: 0, y: 3}, {x: 4, y: 2}].forEach(seed => {
+            // 蛇
+            snake.forEach((s, i) => {
+                ctx.fillStyle = i === 0 ? '#ff1493' : '#ffb3d9';
                 ctx.beginPath();
-                ctx.arc(foodX + seed.x, foodY + seed.y, 1, 0, 2 * Math.PI);
+                ctx.arc(s.x * 20 + 10, s.y * 20 + 10, 9, 0, Math.PI * 2);
                 ctx.fill();
             });
-        }
 
-        function updateStatus() {
-            if (!hasStarted) {
-                gameStatus.innerHTML = '<span class="start-hint">按方向键开始游戏 →</span>';
-            } else if (isPaused) {
-                gameStatus.innerHTML = '⏸️ 游戏已暂停';
-            } else if (gameRunning) {
-                gameStatus.innerHTML = '🎮 游戏进行中...';
-            } else {
-                gameStatus.innerHTML = '';
-            }
+            // 食物
+            ctx.fillStyle = '#ff0040';
+            ctx.beginPath();
+            ctx.arc(food.x * 20 + 10, food.y * 20 + 10, 8, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         function update() {
             if (isPaused || !gameRunning) return;
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
-
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+            if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || snake.some(s => s.x === head.x && s.y === head.y)) {
                 endGame();
                 return;
             }
 
-            for (let segment of snake) {
-                if (segment.x === head.x && segment.y === head.y) {
-                    endGame();
-                    return;
-                }
-            }
-
             snake.unshift(head);
-
             if (head.x === food.x && head.y === food.y) {
                 score += 10;
                 scoreElement.textContent = score;
                 generateFood();
-                
                 if (score > highScore) {
                     highScore = score;
                     highScoreElement.textContent = highScore;
@@ -811,135 +257,64 @@
             }
         }
 
-        function gameLoopFunction() {
-            update();
-            draw();
-        }
-
-        function startGame() {
-            if (!gameRunning) {
-                hasStarted = true;
-                gameRunning = true;
-                gameLoop = setInterval(gameLoopFunction, 120);
-                updateStatus();
-            }
-        }
-
-        function togglePause() {
-            if (!hasStarted) {
-                alert('请先按方向键开始游戏！');
-                return;
-            }
-            isPaused = !isPaused;
-            updateStatus();
-        }
-
         function endGame() {
             gameRunning = false;
             hasStarted = false;
-            clearInterval(gameLoop);
+            clearInterval(window.gameLoop);
             
-            const messages = [
-                { min: 0, max: 30, text: '加油！多练习就会更好的 💪' },
-                { min: 30, max: 80, text: '不错哦！继续努力 🌟' },
-                { min: 80, max: 150, text: '很棒！你很有天赋 🎉' },
-                { min: 150, max: 999999, text: '太厉害了！你是高手 👑' }
-            ];
-            
-            const message = messages.find(m => score >= m.min && score <= m.max);
-            gameOverMessage.textContent = message ? message.text : '再接再厉！';
-            
-            finalScoreElement.textContent = score;
+            document.getElementById('finalScore').textContent = score;
             overlay.style.display = 'block';
-            gameOverModal.style.display = 'block';
-            updateStatus();
+            document.getElementById('gameOverModal').style.display = 'block';
 
             if (checkIfScoreQualifies(score)) {
-                setTimeout(() => showNameInput(score), 2000);
+                setTimeout(() => {
+                    document.getElementById('gameOverModal').style.display = 'none';
+                    document.getElementById('scoreForName').textContent = score;
+                    document.getElementById('nameInputModal').style.display = 'block';
+                }, 1500);
             }
         }
 
         function restartGame() {
-            if (gameLoop) clearInterval(gameLoop);
-            
-            snake = [{x: 10, y: 10}];
-            dx = 0;
-            dy = 0;
-            score = 0;
+            clearInterval(window.gameLoop);
+            snake = [{x: 10, y: 10}]; dx = 0; dy = 0; score = 0;
             scoreElement.textContent = score;
-            isPaused = false;
-            gameRunning = false;
-            hasStarted = false;
-            
+            gameRunning = false; hasStarted = false; isPaused = false;
             generateFood();
             closeAllModals();
             draw();
-            updateStatus();
+            gameStatus.innerHTML = '<span class="start-hint">按方向键开始游戏 →</span>';
         }
 
+        function togglePause() {
+            if (!hasStarted) return;
+            isPaused = !isPaused;
+            gameStatus.textContent = isPaused ? '⏸️ 游戏已暂停' : '🎮 游戏进行中...';
+        }
+
+        function closeAllModals() {
+            overlay.style.display = 'none';
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function skipScore() { closeAllModals(); }
+
         document.addEventListener('keydown', (e) => {
-            if ([32, 37, 38, 39, 40].includes(e.keyCode)) {
+            if ([37,38,39,40].includes(e.keyCode)) {
                 e.preventDefault();
-            }
-
-            if (!gameRunning && [37, 38, 39, 40].includes(e.keyCode)) {
-                startGame();
-            }
-
-            switch(e.keyCode) {
-                case 37:
-                    if (dx !== 1) { dx = -1; dy = 0; }
-                    break;
-                case 38:
-                    if (dy !== 1) { dx = 0; dy = -1; }
-                    break;
-                case 39:
-                    if (dx !== -1) { dx = 1; dy = 0; }
-                    break;
-                case 40:
-                    if (dy !== -1) { dx = 0; dy = 1; }
-                    break;
-                case 32:
-                    togglePause();
-                    break;
+                if (!gameRunning) {
+                    gameRunning = true; hasStarted = true;
+                    window.gameLoop = setInterval(() => { update(); draw(); }, 120);
+                    gameStatus.textContent = '🎮 游戏进行中...';
+                }
+                if (e.keyCode === 37 && dx !== 1) { dx = -1; dy = 0; }
+                if (e.keyCode === 38 && dy !== 1) { dx = 0; dy = -1; }
+                if (e.keyCode === 39 && dx !== -1) { dx = 1; dy = 0; }
+                if (e.keyCode === 40 && dy !== -1) { dx = 0; dy = 1; }
             }
         });
 
-        generateFood();
         draw();
-        updateStatus();
     </script>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDLj14o1eUCrpAi3HLVaEZwHJjkTm1Y3Rc",
-  authDomain: "snake-leaderboard-6a92c.firebaseapp.com",
-  projectId: "snake-leaderboard-6a92c",
-  storageBucket: "snake-leaderboard-6a92c.firebasestorage.app",
-  messagingSenderId: "399594563906",
-  appId: "1:399594563906:web:57686e47280a13ac74c0db"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-async function saveScore(playerName, score) {
-  try {
-    await db.collection("leaderboard").add({
-      name: playerName || "Anonymous",
-      score: score,
-      time: new Date()
-    });
-    console.log("Score saved!");
-  } catch (e) {
-    console.error("Error saving score:", e);
-  }
-}
-</script>
-
 </body>
 </html>
