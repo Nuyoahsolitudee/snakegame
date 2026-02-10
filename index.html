@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>周也的贪吃蛇 - 云端版</title>
     <style>
-        /* 样式部分保持您的粉色可爱风格不变 */
+        /* 样式部分保持不变 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccee 100%); font-family: 'Comic Sans MS', 'Arial', sans-serif; position: relative; overflow: hidden; }
         body::before { content: '🎀'; position: absolute; font-size: 80px; opacity: 0.2; top: 10%; left: 10%; animation: float 6s ease-in-out infinite; }
@@ -106,7 +106,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // 1. 安全初始化 Firebase
+        // 1. 初始化 Firebase 并挂载到全局
         let db;
         try {
             const firebaseConfig = {
@@ -117,18 +117,13 @@
                 messagingSenderId: "399594563906",
                 appId: "1:399594563906:web:57686e47280a13ac74c0db"
             };
-            if (typeof firebase !== 'undefined') {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                console.log("Firebase 初始化成功");
-            } else {
-                console.warn("Firebase 未能加载，云端功能可能不可用");
-            }
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log("Firebase 成功启动");
         } catch (e) {
-            console.error("Firebase 初始化出错:", e);
+            console.error("Firebase 初始化失败:", e);
         }
 
-        // 基础变量
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
@@ -139,13 +134,10 @@
         let snake = [{x: 10, y: 10}];
         let food = {x: 15, y: 15};
         let dx = 0, dy = 0, score = 0, gameRunning = false, isPaused = false, hasStarted = false;
-        
-        // 安全读取本地高分
-        let highScore = 0;
-        try { highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0; } catch(e) {}
+        let highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0;
         highScoreElement.textContent = highScore;
 
-        // --- 全局功能绑定 (确保 HTML onclick 能找到) ---
+        // --- 全局功能函数绑定 (解决 ReferenceError) ---
 
         window.togglePause = function() {
             if (!hasStarted) return;
@@ -171,43 +163,10 @@
 
         window.skipScore = function() { window.closeAllModals(); };
 
-        window.showLeaderboard = async function() {
-            const leaderboardList = document.getElementById('leaderboardList');
-            leaderboardList.innerHTML = '<li class="empty-leaderboard">🎀 正在从云端获取...</li>';
-            
-            overlay.style.display = 'block';
-            document.getElementById('leaderboardModal').style.display = 'block';
-
-            if (!db) {
-                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 数据库加载失败，排行榜不可用</li>';
-                return;
-            }
-
-            try {
-                const snapshot = await db.collection("scores").orderBy("score", "desc").limit(10).get();
-                leaderboardList.innerHTML = '';
-                if (snapshot.empty) {
-                    leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无云端记录</li>';
-                    return;
-                }
-                snapshot.forEach((doc, index) => {
-                    const data = doc.data();
-                    const date = data.date ? data.date.toDate().toLocaleDateString() : '刚刚';
-                    const li = document.createElement('li');
-                    li.className = `leaderboard-item ${index < 3 ? 'rank-' + (index + 1) : ''}`;
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
-                    li.innerHTML = `<span class="player-rank">${medal}</span><div class="player-info"><div class="player-name">${data.name}</div><div class="player-date">${date}</div></div><span class="player-score">${data.score}分</span>`;
-                    leaderboardList.appendChild(li);
-                });
-            } catch (error) {
-                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 获取失败，请检查网络（可能需科学上网）</li>';
-            }
-        };
-
         window.submitScore = async function() {
             const name = document.getElementById('playerNameInput').value.trim();
             if (!name) { alert('请输入名字！'); return; }
-            if (!db) { alert('数据库不可用，无法提交'); return; }
+            if (!db) { alert('数据库未连接，请检查网络'); return; }
 
             const btn = document.querySelector('#nameInputModal .btn');
             btn.disabled = true;
@@ -222,14 +181,47 @@
                 document.getElementById('nameInputModal').style.display = 'none';
                 window.showLeaderboard();
             } catch (error) {
-                console.error("提交失败:", error);
-                alert("提交失败，请检查网络环境");
+                console.error("提交失败: ", error);
+                alert("提交失败！如果是国内用户，可能需要科学上网访问 Firebase");
                 btn.disabled = false;
                 btn.textContent = '✨ 提交';
             }
         };
 
-        // --- 核心游戏引擎 ---
+        window.showLeaderboard = async function() {
+            const leaderboardList = document.getElementById('leaderboardList');
+            leaderboardList.innerHTML = '<li class="empty-leaderboard">🎀 正在从云端获取...</li>';
+            
+            overlay.style.display = 'block';
+            document.getElementById('leaderboardModal').style.display = 'block';
+
+            if (!db) {
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 数据库初始化失败</li>';
+                return;
+            }
+
+            try {
+                const snapshot = await db.collection("scores").orderBy("score", "desc").limit(10).get();
+                leaderboardList.innerHTML = '';
+                if (snapshot.empty) {
+                    leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无记录</li>';
+                    return;
+                }
+                snapshot.forEach((doc, index) => {
+                    const data = doc.data();
+                    const date = data.date ? data.date.toDate().toLocaleDateString() : '刚刚';
+                    const li = document.createElement('li');
+                    li.className = `leaderboard-item ${index < 3 ? 'rank-' + (index + 1) : ''}`;
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                    li.innerHTML = `<span class=\"player-rank\">${medal}</span><div class=\"player-info\"><div class=\"player-name\">${data.name}</div><div class=\"player-date\">${date}</div></div><span class=\"player-score\">${data.score}分</span>`;
+                    leaderboardList.appendChild(li);
+                });
+            } catch (error) {
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 获取失败，请开启科学上网后重试</li>';
+            }
+        };
+
+        // --- 核心游戏逻辑 ---
 
         function generateFood() {
             food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) };
@@ -261,7 +253,7 @@
                 if (score > highScore) {
                     highScore = score;
                     highScoreElement.textContent = highScore;
-                    try { localStorage.setItem('zhouyeSnakeHighScore', highScore); } catch(e){}
+                    localStorage.setItem('zhouyeSnakeHighScore', highScore);
                 }
             } else { snake.pop(); }
         }
@@ -277,7 +269,7 @@
                     document.getElementById('gameOverModal').style.display = 'none';
                     document.getElementById('scoreForName').textContent = score;
                     document.getElementById('nameInputModal').style.display = 'block';
-                }, 1500);
+                }, 2000);
             }
         }
 
