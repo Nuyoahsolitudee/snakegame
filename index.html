@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>周也的贪吃蛇</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccee 100%);
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '🎀';
+            position: absolute;
+            font-size: 80px;
+            opacity: 0.2;
+            top: 10%;
+            left: 10%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        body::after {
+            content: '🎀';
+            position: absolute;
+            font-size: 60px;
+            opacity: 0.2;
+            bottom: 15%;
+            right: 15%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .hearts {
+            position: absolute;
+            font-size: 40px;
+            opacity: 0.15;
+        }
+
+        .heart1 { top: 20%; right: 20%; animation: pulse 3s infinite; }
+        .heart2 { bottom: 25%; left: 15%; animation: pulse 4s infinite; }
+        .heart3 { top: 60%; right: 10%; animation: pulse 3.5s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 30px;
+            box-shadow: 0 15px 50px rgba(255, 105, 180, 0.4);
+            border: 5px solid #ff69b4;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            color: #ff1493;
+            margin-bottom: 20px;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(255, 105, 180, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .kitty-face {
+            font-size: 50px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+
+        .score-item {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #ffccee 0%, #ffb3d9 100%);
+            border-radius: 20px;
+            border: 3px solid #ff69b4;
+            font-size: 18px;
+            color: #ff1493;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(255, 105, 180, 0.2);
+        }
+
+        canvas {
+            border: 5px solid #ff69b4;
+            border-radius: 20px;
+            background: #fff0f5;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 8px 20px rgba(255, 105, 180, 0.3);
+        }
+
+        .controls {
+            margin-top: 20px;
+            color: #ff1493;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .controls p {
+            margin: 5px 0;
+        }
+
+        .game-status {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #ff1493;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 105, 180, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 100%);
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 182, 193, 0.85);
+            z-index: 999;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translate(-50%, -40%);
+            }
+            to { 
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 15px 60px rgba(255, 105, 180, 0.5);
+            z-index: 1000;
+            border: 5px solid #ff69b4;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .game-over-modal {
+            text-align: center;
+            min-width: 320px;
+        }
+
+        .game-over-modal h2 {
+            color: #ff1493;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .game-over-modal .score-display {
+            font-size: 48px;
+            color: #ff69b4;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .game-over-modal .message {
+            color: #666;
+            font-size: 16px;
+            margin: 15px 0;
+        }
+
+        .leaderboard-modal {
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .leaderboard-modal h2 {
+            color: #ff1493;
+            margin-bottom: 25px;
+            font-size: 26px;
+            text-align: center;
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #fff0f5 0%, #ffe4f0 100%);
+            border-radius: 15px;
+            border: 2px solid #ffb3d9;
+            transition: all 0.3s;
+        }
+
+        .leaderboard-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+        }
+
+        .leaderboard-item.rank-1 {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border-color: #ffa500;
+        }
+
+        .leaderboard-item.rank-2 {
+            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+            border-color: #a9a9a9;
+        }
+
+        .leaderboard-item.rank-3 {
+            background: linear-gradient(135deg, #cd7f32 0%, #e9b872 100%);
+            border-color: #b8860b;
+        }
+
+        .player-rank {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff1493;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .player-info {
+            flex: 1;
+            margin-left: 15px;
+            text-align: left;
+        }
+
+        .player-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .player-date {
+            font-size: 12px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .player-score {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ff1493;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .name-input-modal {
+            text-align: center;
+            min-width: 350px;
+        }
+
+        .name-input-modal h3 {
+            color: #ff1493;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .name-input-modal .congrats {
+            font-size: 50px;
+            margin: 15px 0;
+        }
+
+        .name-input-modal input {
+            width: 100%;
+            max-width: 280px;
+            padding: 15px 20px;
+            font-size: 18px;
+            border: 3px solid #ff69b4;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .name-input-modal input:focus {
+            border-color: #ff1493;
+            box-shadow: 0 0 15px rgba(255, 105, 180, 0.4);
+        }
+
+        .empty-leaderboard {
+            text-align: center;
+            color: #ff69b4;
+            padding: 40px 20px;
+            font-size: 16px;
+        }
+
+        .cute-emoji {
+            font-size: 50px;
+            margin: 10px 0;
+        }
+
+        .start-hint {
+            color: #ff69b4;
+            font-size: 18px;
+            margin-top: 15px;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="hearts heart1">💖</div>
+    <div class="hearts heart2">💝</div>
+    <div class="hearts heart3">💕</div>
+
+    <div class="container">
+        <h1>
+            <span class="kitty-face">💖</span>
+            周也的贪吃蛇
+            <span class="kitty-face">💖</span>
+        </h1>
+        
+        <div class="score-board">
+            <div class="score-item">
+                🌸 当前得分：<span id="score">0</span>
+            </div>
+            <div class="score-item">
+                ⭐ 最高分：<span id="highScore">0</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <div class="game-status" id="gameStatus">
+            <span class="start-hint">按方向键开始游戏 →</span>
+        </div>
+
+        <div class="button-group">
+            <button class="btn" onclick="togglePause()">⏸️ 暂停/继续</button>
+            <button class="btn btn-secondary" onclick="showLeaderboard()">🏆 排行榜</button>
+            <button class="btn btn-secondary" onclick="restartGame()">🔄 重新开始</button>
+        </div>
+
+        <div class="controls">
+            <p>🎮 方向键 ↑ ↓ ← → 控制移动</p>
+            <p>🍓 吃草莓得分，撞墙或自己就输了</p>
+        </div>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay" id="overlay" onclick="closeAllModals()"></div>
+    
+    <!-- 游戏结束弹窗 -->
+    <div class="modal game-over-modal" id="gameOverModal">
+        <div class="cute-emoji">😿</div>
+        <h2>游戏结束</h2>
+        <div class="score-display" id="finalScore">0</div>
+        <div class="message" id="gameOverMessage">再接再厉哦！</div>
+        <div class="button-group">
+            <button class="btn" onclick="restartGame()">🌟 再玩一次</button>
+            <button class="btn btn-secondary" onclick="closeAllModals()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 输入名字弹窗 -->
+    <div class="modal name-input-modal" id="nameInputModal">
+        <div class="congrats">🎉</div>
+        <h3>恭喜进入排行榜！</h3>
+        <p style="color: #ff69b4; font-size: 18px;">你的得分：<strong id="scoreForName">0</strong> 分</p>
+        <input type="text" id="playerNameInput" placeholder="请输入你的名字" maxlength="15" autocomplete="off">
+        <div class="button-group">
+            <button class="btn" onclick="submitScore()">✨ 提交</button>
+            <button class="btn btn-secondary" onclick="skipScore()">跳过</button>
+        </div>
+    </div>
+
+    <!-- 排行榜弹窗 -->
+    <div class="modal leaderboard-modal" id="leaderboardModal">
+        <h2>🏆 排行榜 TOP 10 🏆</h2>
+        <ul class="leaderboard-list" id="leaderboardList"></ul>
+        <div class="button-group">
+            <button class="btn" onclick="closeLeaderboard()">关闭</button>
+            <button class="btn btn-secondary" onclick="clearLeaderboard()">🗑️ 清空记录</button>
+        </div>
+    </div>
+
+    <!-- Firebase CDN -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDLj14o1eUCrpAi3HLVaEZwHJjkTm1Y3Rc",
+  authDomain: "snake-leaderboard-6a92c.firebaseapp.com",
+  projectId: "snake-leaderboard-6a92c",
+  storageBucket: "snake-leaderboard-6a92c.firebasestorage.app",
+  messagingSenderId: "399594563906",
+  appId: "1:399594563906:web:57686e47280a13ac74c0db"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const leaderboardRef = collection(db, "leaderboard");
+
+async function addToLeaderboard(name, score) {
+  await addDoc(leaderboardRef, {
+    name,
+    score,
+    date: new Date().toLocaleString()
+  });
+}
+
+async function getLeaderboard() {
+  const q = query(leaderboardRef, orderBy("score", "desc"), limit(10));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => d.data());
+}
+
+window.showLeaderboard = async function () {
+  const leaderboard = await getLeaderboard();
+  const leaderboardList = document.getElementById('leaderboardList');
+  leaderboardList.innerHTML = '';
+
+  if (leaderboard.length === 0) {
+    leaderboardList.innerHTML =
+      '<li class="empty-leaderboard">暂无记录</li>';
+    return;
+  }
+
+  leaderboard.forEach((entry, index) => {
+    const li = document.createElement('li');
+    li.className = 'leaderboard-item';
+    li.innerHTML = `
+      <span>#${index + 1}</span>
+      <span>${entry.name}</span>
+      <span>${entry.score}</span>
+    `;
+    leaderboardList.appendChild(li);
+  });
+
+  overlay.style.display = 'block';
+  leaderboardModal.style.display = 'block';
+};
+
+window.submitScore = async function () {
+  const name = playerNameInput.value.trim();
+  if (!name) return alert("请输入名字");
+
+  await addToLeaderboard(name, currentGameScore);
+  nameInputModal.style.display = 'none';
+  showLeaderboard();
+};
+</script>
+</body>
+</html>
