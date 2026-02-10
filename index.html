@@ -465,20 +465,456 @@
         </div>
     </div>
 
-    <!-- Firebase CDN -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  deleteDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const overlay = document.getElementById('overlay');
+        const finalScoreElement = document.getElementById('finalScore');
+        const nameInputModal = document.getElementById('nameInputModal');
+        const leaderboardModal = document.getElementById('leaderboardModal');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const scoreForName = document.getElementById('scoreForName');
+        const gameStatus = document.getElementById('gameStatus');
+        const gameOverMessage = document.getElementById('gameOverMessage');
 
+        // 创建头像图片
+        const avatarImg = new Image();
+        avatarImg.crossOrigin = "anonymous";
+        
+        // 游戏配置
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        // 游戏状态
+        let snake = [{x: 10, y: 10}];
+        let food = {x: 15, y: 15};
+        let dx = 0;
+        let dy = 0;
+        let score = 0;
+        let highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0;
+        let gameRunning = false;
+        let gameLoop;
+        let isPaused = false;
+        let imageLoaded = false;
+        let currentGameScore = 0;
+        let hasStarted = false;
+
+        highScoreElement.textContent = highScore;
+
+        // 排行榜功能
+        function getLeaderboard() {
+            const leaderboard = localStorage.getItem('snakeLeaderboard');
+            return leaderboard ? JSON.parse(leaderboard) : [];
+        }
+
+        function saveLeaderboard(leaderboard) {
+            localStorage.setItem('snakeLeaderboard', JSON.stringify(leaderboard));
+        }
+
+        function addToLeaderboard(name, score) {
+            let leaderboard = getLeaderboard();
+            leaderboard.push({ 
+                name: name, 
+                score: score, 
+                date: new Date().toLocaleString('zh-CN', { 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                })
+            });
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard = leaderboard.slice(0, 10);
+            saveLeaderboard(leaderboard);
+        }
+
+        function showLeaderboard() {
+            const leaderboard = getLeaderboard();
+            const leaderboardList = document.getElementById('leaderboardList');
+            leaderboardList.innerHTML = '';
+
+            if (leaderboard.length === 0) {
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无记录<br>快来创造第一个记录吧！</li>';
+            } else {
+                leaderboard.forEach((entry, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'leaderboard-item';
+                    if (index === 0) li.classList.add('rank-1');
+                    else if (index === 1) li.classList.add('rank-2');
+                    else if (index === 2) li.classList.add('rank-3');
+
+                    const rankDisplay = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                    
+                    li.innerHTML = `
+                        <span class="player-rank">${rankDisplay}</span>
+                        <div class="player-info">
+                            <div class="player-name">${entry.name}</div>
+                            <div class="player-date">${entry.date}</div>
+                        </div>
+                        <span class="player-score">${entry.score}分</span>
+                    `;
+                    leaderboardList.appendChild(li);
+                });
+            }
+
+            overlay.style.display = 'block';
+            leaderboardModal.style.display = 'block';
+        }
+
+        function closeLeaderboard() {
+            overlay.style.display = 'none';
+            leaderboardModal.style.display = 'none';
+        }
+
+        function clearLeaderboard() {
+            if (confirm('确定要清空所有排行榜记录吗？此操作不可恢复！')) {
+                localStorage.removeItem('snakeLeaderboard');
+                showLeaderboard();
+            }
+        }
+
+        function checkIfScoreQualifies(score) {
+            if (score === 0) return false;
+            const leaderboard = getLeaderboard();
+            if (leaderboard.length < 10) return true;
+            return score > leaderboard[leaderboard.length - 1].score;
+        }
+
+        function showNameInput(score) {
+            currentGameScore = score;
+            scoreForName.textContent = score;
+            playerNameInput.value = '';
+            gameOverModal.style.display = 'none';
+            nameInputModal.style.display = 'block';
+            setTimeout(() => playerNameInput.focus(), 100);
+        }
+
+        function submitScore() {
+            const name = playerNameInput.value.trim();
+            if (name === '') {
+                alert('请输入你的名字哦！💖');
+                playerNameInput.focus();
+                return;
+            }
+            addToLeaderboard(name, currentGameScore);
+            nameInputModal.style.display = 'none';
+            showLeaderboard();
+        }
+
+        function skipScore() {
+            nameInputModal.style.display = 'none';
+            closeAllModals();
+        }
+
+        function closeAllModals() {
+            overlay.style.display = 'none';
+            gameOverModal.style.display = 'none';
+            nameInputModal.style.display = 'none';
+            leaderboardModal.style.display = 'none';
+        }
+
+        playerNameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitScore();
+            }
+        });
+
+        // 加载头像
+        function loadAvatar() {
+            avatarImg.src = 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+                    <circle cx="50" cy="50" r="48" fill="#ff69b4"/>
+                    <circle cx="35" cy="42" r="6" fill="white"/>
+                    <circle cx="65" cy="42" r="6" fill="white"/>
+                    <circle cx="35" cy="42" r="3" fill="black"/>
+                    <circle cx="65" cy="42" r="3" fill="black"/>
+                    <circle cx="28" cy="52" r="4" fill="#ffb3d9" opacity="0.6"/>
+                    <circle cx="72" cy="52" r="4" fill="#ffb3d9" opacity="0.6"/>
+                    <path d="M 32 62 Q 50 72 68 62" stroke="#ff1493" stroke-width="3" fill="none" stroke-linecap="round"/>
+                </svg>
+            `);
+            imageLoaded = true;
+        }
+
+        loadAvatar();
+
+        // 生成随机食物位置
+        function generateFood() {
+            food = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+            
+            for (let segment of snake) {
+                if (segment.x === food.x && segment.y === food.y) {
+                    generateFood();
+                    return;
+                }
+            }
+        }
+
+        // 绘制蛇头
+        function drawSnakeHead(x, y) {
+            const centerX = x * gridSize + gridSize / 2;
+            const centerY = y * gridSize + gridSize / 2;
+            const size = gridSize - 2;
+            
+            ctx.strokeStyle = '#ff1493';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, size / 2 + 1, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, size / 2, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            if (imageLoaded && avatarImg.complete) {
+                ctx.drawImage(avatarImg, centerX - size / 2, centerY - size / 2, size, size);
+            } else {
+                ctx.fillStyle = '#ff69b4';
+                ctx.fill();
+            }
+            
+            ctx.restore();
+            
+            ctx.fillStyle = '#ff1493';
+            ctx.font = 'bold 9px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+            ctx.shadowBlur = 3;
+            ctx.fillText('周也', centerX, y * gridSize + gridSize + 10);
+            ctx.shadowBlur = 0;
+        }
+
+        // 绘制游戏
+        function draw() {
+            ctx.fillStyle = '#fff0f5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'rgba(255, 182, 193, 0.1)';
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 5; j++) {
+                    if ((i + j) % 2 === 0) {
+                        ctx.beginPath();
+                        ctx.arc(i * 100 + 50, j * 100 + 50, 3, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            snake.forEach((segment, index) => {
+                if (index === 0) {
+                    drawSnakeHead(segment.x, segment.y);
+                } else {
+                    const gradient = ctx.createRadialGradient(
+                        segment.x * gridSize + gridSize / 2,
+                        segment.y * gridSize + gridSize / 2, 0,
+                        segment.x * gridSize + gridSize / 2,
+                        segment.y * gridSize + gridSize / 2, gridSize / 2
+                    );
+                    gradient.addColorStop(0, '#ffb3d9');
+                    gradient.addColorStop(1, '#ff99cc');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(
+                        segment.x * gridSize + gridSize / 2,
+                        segment.y * gridSize + gridSize / 2,
+                        gridSize / 2 - 1, 0, 2 * Math.PI
+                    );
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(
+                        segment.x * gridSize + gridSize / 2 - 3,
+                        segment.y * gridSize + gridSize / 2 - 3,
+                        3, 0, 2 * Math.PI
+                    );
+                    ctx.fill();
+                }
+            });
+
+            const foodX = food.x * gridSize + gridSize / 2;
+            const foodY = food.y * gridSize + gridSize / 2;
+            
+            ctx.fillStyle = '#ff0040';
+            ctx.beginPath();
+            ctx.arc(foodX, foodY, gridSize / 2 - 2, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.fillStyle = '#00cc00';
+            ctx.beginPath();
+            ctx.moveTo(foodX - 3, foodY - 6);
+            ctx.lineTo(foodX, foodY - 9);
+            ctx.lineTo(foodX + 3, foodY - 6);
+            ctx.lineTo(foodX, foodY - 4);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.fillStyle = '#ffff99';
+            [{x: -3, y: -2}, {x: 3, y: -2}, {x: -4, y: 2}, {x: 0, y: 3}, {x: 4, y: 2}].forEach(seed => {
+                ctx.beginPath();
+                ctx.arc(foodX + seed.x, foodY + seed.y, 1, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function updateStatus() {
+            if (!hasStarted) {
+                gameStatus.innerHTML = '<span class="start-hint">按方向键开始游戏 →</span>';
+            } else if (isPaused) {
+                gameStatus.innerHTML = '⏸️ 游戏已暂停';
+            } else if (gameRunning) {
+                gameStatus.innerHTML = '🎮 游戏进行中...';
+            } else {
+                gameStatus.innerHTML = '';
+            }
+        }
+
+        function update() {
+            if (isPaused || !gameRunning) return;
+
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                endGame();
+                return;
+            }
+
+            for (let segment of snake) {
+                if (segment.x === head.x && segment.y === head.y) {
+                    endGame();
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreElement.textContent = score;
+                generateFood();
+                
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreElement.textContent = highScore;
+                    localStorage.setItem('zhouyeSnakeHighScore', highScore);
+                }
+            } else {
+                snake.pop();
+            }
+        }
+
+        function gameLoopFunction() {
+            update();
+            draw();
+        }
+
+        function startGame() {
+            if (!gameRunning) {
+                hasStarted = true;
+                gameRunning = true;
+                gameLoop = setInterval(gameLoopFunction, 120);
+                updateStatus();
+            }
+        }
+
+        function togglePause() {
+            if (!hasStarted) {
+                alert('请先按方向键开始游戏！');
+                return;
+            }
+            isPaused = !isPaused;
+            updateStatus();
+        }
+
+        function endGame() {
+            gameRunning = false;
+            hasStarted = false;
+            clearInterval(gameLoop);
+            
+            const messages = [
+                { min: 0, max: 30, text: '加油！多练习就会更好的 💪' },
+                { min: 30, max: 80, text: '不错哦！继续努力 🌟' },
+                { min: 80, max: 150, text: '很棒！你很有天赋 🎉' },
+                { min: 150, max: 999999, text: '太厉害了！你是高手 👑' }
+            ];
+            
+            const message = messages.find(m => score >= m.min && score <= m.max);
+            gameOverMessage.textContent = message ? message.text : '再接再厉！';
+            
+            finalScoreElement.textContent = score;
+            overlay.style.display = 'block';
+            gameOverModal.style.display = 'block';
+            updateStatus();
+
+            if (checkIfScoreQualifies(score)) {
+                setTimeout(() => showNameInput(score), 2000);
+            }
+        }
+
+        function restartGame() {
+            if (gameLoop) clearInterval(gameLoop);
+            
+            snake = [{x: 10, y: 10}];
+            dx = 0;
+            dy = 0;
+            score = 0;
+            scoreElement.textContent = score;
+            isPaused = false;
+            gameRunning = false;
+            hasStarted = false;
+            
+            generateFood();
+            closeAllModals();
+            draw();
+            updateStatus();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if ([32, 37, 38, 39, 40].includes(e.keyCode)) {
+                e.preventDefault();
+            }
+
+            if (!gameRunning && [37, 38, 39, 40].includes(e.keyCode)) {
+                startGame();
+            }
+
+            switch(e.keyCode) {
+                case 37:
+                    if (dx !== 1) { dx = -1; dy = 0; }
+                    break;
+                case 38:
+                    if (dy !== 1) { dx = 0; dy = -1; }
+                    break;
+                case 39:
+                    if (dx !== -1) { dx = 1; dy = 0; }
+                    break;
+                case 40:
+                    if (dy !== -1) { dx = 0; dy = 1; }
+                    break;
+                case 32:
+                    togglePause();
+                    break;
+            }
+        });
+
+        generateFood();
+        draw();
+        updateStatus();
+    </script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyDLj14o1eUCrpAi3HLVaEZwHJjkTm1Y3Rc",
   authDomain: "snake-leaderboard-6a92c.firebaseapp.com",
@@ -488,59 +924,22 @@ const firebaseConfig = {
   appId: "1:399594563906:web:57686e47280a13ac74c0db"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-const leaderboardRef = collection(db, "leaderboard");
-
-async function addToLeaderboard(name, score) {
-  await addDoc(leaderboardRef, {
-    name,
-    score,
-    date: new Date().toLocaleString()
-  });
-}
-
-async function getLeaderboard() {
-  const q = query(leaderboardRef, orderBy("score", "desc"), limit(10));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(d => d.data());
-}
-
-window.showLeaderboard = async function () {
-  const leaderboard = await getLeaderboard();
-  const leaderboardList = document.getElementById('leaderboardList');
-  leaderboardList.innerHTML = '';
-
-  if (leaderboard.length === 0) {
-    leaderboardList.innerHTML =
-      '<li class="empty-leaderboard">暂无记录</li>';
-    return;
+async function saveScore(playerName, score) {
+  try {
+    await db.collection("leaderboard").add({
+      name: playerName || "Anonymous",
+      score: score,
+      time: new Date()
+    });
+    console.log("Score saved!");
+  } catch (e) {
+    console.error("Error saving score:", e);
   }
-
-  leaderboard.forEach((entry, index) => {
-    const li = document.createElement('li');
-    li.className = 'leaderboard-item';
-    li.innerHTML = `
-      <span>#${index + 1}</span>
-      <span>${entry.name}</span>
-      <span>${entry.score}</span>
-    `;
-    leaderboardList.appendChild(li);
-  });
-
-  overlay.style.display = 'block';
-  leaderboardModal.style.display = 'block';
-};
-
-window.submitScore = async function () {
-  const name = playerNameInput.value.trim();
-  if (!name) return alert("请输入名字");
-
-  await addToLeaderboard(name, currentGameScore);
-  nameInputModal.style.display = 'none';
-  showLeaderboard();
-};
+}
 </script>
+
 </body>
 </html>
