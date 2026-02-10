@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>周也的贪吃蛇 - 最终修复版</title>
+    <title>周也的贪吃蛇 - 奖杯修复版</title>
     <style>
-        /* 基础布局 */
+        /* 1. 基础样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccee 100%); font-family: 'Comic Sans MS', 'Arial', sans-serif; position: relative; overflow: hidden; }
         
@@ -17,7 +17,7 @@
         .btn-pause { background: #ff69b4; }
         .btn-rank { background: #ff1493; }
         
-        /* 排行榜弹窗样式 */
+        /* 2. 排行榜专用样式 (已加固) */
         .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 25px; z-index: 1000; width: 90%; max-width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 5px solid #ff69b4; }
         #leaderboardList { list-style: none; margin: 20px 0; max-height: 300px; overflow-y: auto; }
         
@@ -30,17 +30,19 @@
             border-radius: 15px; 
         }
         
-        /* 核心修复：防止 CSS 伪元素产生 #NaN */
+        /* 【核心修复】这里绝对禁止 CSS 伪元素干扰 */
         .player-rank { 
-            width: 50px; 
-            font-size: 1.5rem; 
+            width: 55px; 
+            font-size: 1.6rem; 
             text-align: center; 
-            margin-right: 15px; 
+            margin-right: 10px; 
+            display: inline-block;
             font-weight: bold;
             color: #ff1493;
-            display: inline-block;
         }
-        .player-rank::before { content: none !important; } /* 禁用任何可能存在的冲突样式 */
+        .player-rank::before, .player-rank::after { 
+            content: none !important; /* 暴力清除 #NaN 的来源 */
+        }
 
         .player-info { flex-grow: 1; }
         .player-name { font-weight: bold; color: #555; }
@@ -69,18 +71,18 @@
     <div id="overlay"></div>
 
     <div id="leaderboardModal" class="modal">
-        <h2 style="text-align:center; color:#ff1493;">🎀 全球排行榜 🎀</h2>
+        <h2 style="text-align:center; color:#ff1493;">🏆 全球排行榜 🏆</h2>
         <ul id="leaderboardList"></ul>
-        <button class="btn btn-pause" style="width:100%" onclick="window.closeAllModals()">返回游戏</button>
+        <button class="btn btn-pause" style="width:100%" onclick="window.closeAllModals()">关闭</button>
     </div>
 
     <div id="nameInputModal" class="modal">
-        <h3 style="text-align:center; color:#ff1493;">✨ 惊人的表现! ✨</h3>
+        <h3 style="text-align:center; color:#ff1493;">✨ 记录新高! ✨</h3>
         <p style="text-align:center; margin:10px 0;">得分: <span id="scoreForName">0</span></p>
-        <input type="text" id="playerNameInput" placeholder="输入你的昵称..." maxlength="8" 
-               style="width:100%; padding:10px; border-radius:15px; border:2px solid #ffb3d9; margin-bottom:15px; outline:none;">
+        <input type="text" id="playerNameInput" placeholder="请输入你的大名..." maxlength="8" 
+               style="width:100%; padding:12px; border-radius:15px; border:2px solid #ffb3d9; margin-bottom:15px; outline:none;">
         <div style="display:flex; gap:10px;">
-            <button class="btn btn-rank" style="flex:1" onclick="window.submitScore()">提交分数</button>
+            <button class="btn btn-rank" style="flex:1" onclick="window.submitScore()">保存分数</button>
             <button class="btn btn-pause" style="flex:1; background:#ccc;" onclick="window.skipScore()">跳过</button>
         </div>
     </div>
@@ -108,7 +110,7 @@
             };
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
-        } catch (e) { console.error("Firebase 初始化失败", e); }
+        } catch (e) { console.error("Firebase Error:", e); }
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -147,15 +149,15 @@
 
         window.skipScore = function() { window.closeAllModals(); };
 
-        // --- 核心修复：排行榜奖杯渲染逻辑 ---
+        // --- 排行榜修复逻辑 ---
         window.showLeaderboard = async function() {
             const leaderboardList = document.getElementById('leaderboardList');
-            leaderboardList.innerHTML = '<li style="text-align:center; padding:20px;">🎀 正在加载云端数据...</li>';
+            leaderboardList.innerHTML = '<li style="text-align:center; padding:20px;">🎀 数据同步中...</li>';
             overlay.style.display = 'block';
             document.getElementById('leaderboardModal').style.display = 'block';
 
             if (!db) {
-                leaderboardList.innerHTML = '<li style="color:red; text-align:center;">❌ 数据库未连接</li>';
+                leaderboardList.innerHTML = '<li style="color:red; text-align:center;">❌ 数据库连接失败</li>';
                 return;
             }
 
@@ -164,44 +166,46 @@
                 leaderboardList.innerHTML = '';
 
                 if (snapshot.empty) {
-                    leaderboardList.innerHTML = '<li style="text-align:center; padding:20px;">🌟 暂无记录</li>';
+                    leaderboardList.innerHTML = '<li style="text-align:center; padding:20px;">🌟 暂无数据</li>';
                     return;
                 }
 
-                let currentRank = 1; // 手动计数，绝不会出现 NaN
+                // 【加固逻辑】手动维护索引计数
+                let rankCounter = 1; 
+
                 snapshot.forEach((doc) => {
                     const data = doc.data();
                     const li = document.createElement('li');
-                    li.className = `leaderboard-item rank-${currentRank}`;
+                    li.className = `leaderboard-item rank-${rankCounter}`;
                     
-                    // 奖杯逻辑
-                    let trophy = `#${currentRank}`;
-                    if (currentRank === 1) trophy = '🥇';
-                    else if (currentRank === 2) trophy = '🥈';
-                    else if (currentRank === 3) trophy = '🥉';
+                    // 奖杯 Emoji 判定
+                    let rankContent;
+                    if (rankCounter === 1) rankContent = '🥇';
+                    else if (rankCounter === 2) rankContent = '🥈';
+                    else if (rankCounter === 3) rankContent = '🥉';
+                    else rankContent = `#${rankCounter}`; 
 
                     li.innerHTML = `
-                        <span class="player-rank">${trophy}</span>
+                        <span class="player-rank">${rankContent}</span>
                         <div class="player-info">
-                            <div class="player-name">${data.name || '无名英雄'}</div>
+                            <div class="player-name">${data.name || '神秘玩家'}</div>
                         </div>
                         <span class="player-score">${data.score}分</span>
                     `;
                     leaderboardList.appendChild(li);
-                    currentRank++;
+                    rankCounter++; // 确保索引绝对递增
                 });
             } catch (error) {
-                leaderboardList.innerHTML = '<li style="color:red; text-align:center;">❌ 加载失败，请检查代理</li>';
+                leaderboardList.innerHTML = '<li style="color:red; text-align:center;">❌ 加载异常</li>';
             }
         };
 
         window.submitScore = async function() {
             const nameInput = document.getElementById('playerNameInput');
             const name = nameInput.value.trim();
-            if (!name) { alert('请输入名字 🎀'); return; }
+            if (!name) { alert('名字不能为空哦'); return; }
             const btn = document.querySelector('#nameInputModal .btn-rank');
-            btn.disabled = true;
-            btn.textContent = '提交中...';
+            btn.disabled = true; btn.textContent = '保存中...';
             try {
                 await db.collection("scores").add({
                     name: name,
@@ -212,12 +216,11 @@
                 window.showLeaderboard(); 
             } catch (error) {
                 alert("提交失败");
-                btn.disabled = false;
-                btn.textContent = '提交分数';
+                btn.disabled = false; btn.textContent = '保存分数';
             }
         };
 
-        // --- 游戏引擎 ---
+        // --- 贪吃蛇引擎 ---
         function generateFood() {
             food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) };
             if (snake.some(s => s.x === food.x && s.y === food.y)) generateFood();
