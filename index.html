@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>周也的贪吃蛇 - 云端版</title>
     <style>
-        /* 保持你原始的所有样式不变 */
+        /* 样式部分保持您的粉色可爱风格不变 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccee 100%); font-family: 'Comic Sans MS', 'Arial', sans-serif; position: relative; overflow: hidden; }
         body::before { content: '🎀'; position: absolute; font-size: 80px; opacity: 0.2; top: 10%; left: 10%; animation: float 6s ease-in-out infinite; }
@@ -120,10 +120,12 @@
             if (typeof firebase !== 'undefined') {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
-                console.log("Firebase 准备就绪");
+                console.log("Firebase 初始化成功");
+            } else {
+                console.warn("Firebase 未能加载，云端功能可能不可用");
             }
         } catch (e) {
-            console.error("Firebase 启动失败:", e);
+            console.error("Firebase 初始化出错:", e);
         }
 
         // 基础变量
@@ -138,14 +140,12 @@
         let food = {x: 15, y: 15};
         let dx = 0, dy = 0, score = 0, gameRunning = false, isPaused = false, hasStarted = false;
         
-        // 安全读取本地存储
+        // 安全读取本地高分
         let highScore = 0;
-        try {
-            highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0;
-        } catch(e) {}
+        try { highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0; } catch(e) {}
         highScoreElement.textContent = highScore;
 
-        // --- 核心全局功能 ---
+        // --- 全局功能绑定 (确保 HTML onclick 能找到) ---
 
         window.togglePause = function() {
             if (!hasStarted) return;
@@ -179,7 +179,7 @@
             document.getElementById('leaderboardModal').style.display = 'block';
 
             if (!db) {
-                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 数据库加载失败，请检查配置或网络</li>';
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 数据库加载失败，排行榜不可用</li>';
                 return;
             }
 
@@ -187,7 +187,7 @@
                 const snapshot = await db.collection("scores").orderBy("score", "desc").limit(10).get();
                 leaderboardList.innerHTML = '';
                 if (snapshot.empty) {
-                    leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无记录</li>';
+                    leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无云端记录</li>';
                     return;
                 }
                 snapshot.forEach((doc, index) => {
@@ -200,14 +200,14 @@
                     leaderboardList.appendChild(li);
                 });
             } catch (error) {
-                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 获取失败，请重试</li>';
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 获取失败，请检查网络（可能需科学上网）</li>';
             }
         };
 
         window.submitScore = async function() {
             const name = document.getElementById('playerNameInput').value.trim();
             if (!name) { alert('请输入名字！'); return; }
-            if (!db) { alert('数据库不可用'); return; }
+            if (!db) { alert('数据库不可用，无法提交'); return; }
 
             const btn = document.querySelector('#nameInputModal .btn');
             btn.disabled = true;
@@ -222,13 +222,14 @@
                 document.getElementById('nameInputModal').style.display = 'none';
                 window.showLeaderboard();
             } catch (error) {
-                alert("提交失败，请检查网络（如果是国内用户，可能需要科学上网访问 Firebase）");
+                console.error("提交失败:", error);
+                alert("提交失败，请检查网络环境");
                 btn.disabled = false;
                 btn.textContent = '✨ 提交';
             }
         };
 
-        // --- 游戏内部逻辑 ---
+        // --- 核心游戏引擎 ---
 
         function generateFood() {
             food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) };
