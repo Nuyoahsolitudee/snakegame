@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>周也的贪吃蛇 - 云端版</title>
     <style>
-        /* 样式保持不变 */
+        /* 保持你原始的所有样式不变 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccee 100%); font-family: 'Comic Sans MS', 'Arial', sans-serif; position: relative; overflow: hidden; }
         body::before { content: '🎀'; position: absolute; font-size: 80px; opacity: 0.2; top: 10%; left: 10%; animation: float 6s ease-in-out infinite; }
@@ -61,9 +61,9 @@
         <canvas id="gameCanvas" width="400" height="400"></canvas>
         <div class="game-status" id="gameStatus"><span class="start-hint">按方向键开始游戏 →</span></div>
         <div class="button-group">
-            <button class="btn" onclick="togglePause()">⏸️ 暂停/继续</button>
-            <button class="btn btn-secondary" onclick="showLeaderboard()">🏆 排行榜</button>
-            <button class="btn btn-secondary" onclick="restartGame()">🔄 重新开始</button>
+            <button class="btn" onclick="window.togglePause()">⏸️ 暂停/继续</button>
+            <button class="btn btn-secondary" onclick="window.showLeaderboard()">🏆 排行榜</button>
+            <button class="btn btn-secondary" onclick="window.restartGame()">🔄 重新开始</button>
         </div>
         <div class="controls">
             <p>🎮 方向键 ↑ ↓ ← → 控制移动 | 🍓 吃草莓得分</p>
@@ -77,7 +77,7 @@
         <div class="score-display" id="finalScore">0</div>
         <div class="message" id="gameOverMessage">再接再厉哦！</div>
         <div class="button-group">
-            <button class="btn" onclick="restartGame()">🌟 再玩一次</button>
+            <button class="btn" onclick="window.restartGame()">🌟 再玩一次</button>
         </div>
     </div>
 
@@ -87,8 +87,8 @@
         <p>得分：<strong id="scoreForName">0</strong></p>
         <input type="text" id="playerNameInput" placeholder="输入你的名字" maxlength="10">
         <div class="button-group">
-            <button class="btn" onclick="submitScore()">✨ 提交</button>
-            <button class="btn btn-secondary" onclick="skipScore()">跳过</button>
+            <button class="btn" onclick="window.submitScore()">✨ 提交</button>
+            <button class="btn btn-secondary" onclick="window.skipScore()">跳过</button>
         </div>
     </div>
 
@@ -98,7 +98,7 @@
             <li class="empty-leaderboard">加载中...</li>
         </ul>
         <div class="button-group">
-            <button class="btn" onclick="closeAllModals()">关闭</button>
+            <button class="btn" onclick="window.closeAllModals()">关闭</button>
         </div>
     </div>
 
@@ -120,8 +120,11 @@
             if (typeof firebase !== 'undefined') {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
+                console.log("Firebase 准备就绪");
             }
-        } catch (e) { console.error("Firebase初始化失败:", e); }
+        } catch (e) {
+            console.error("Firebase 启动失败:", e);
+        }
 
         // 基础变量
         const canvas = document.getElementById('gameCanvas');
@@ -135,12 +138,14 @@
         let food = {x: 15, y: 15};
         let dx = 0, dy = 0, score = 0, gameRunning = false, isPaused = false, hasStarted = false;
         
-        // 安全读取本地高分
+        // 安全读取本地存储
         let highScore = 0;
-        try { highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0; } catch(e) {}
+        try {
+            highScore = localStorage.getItem('zhouyeSnakeHighScore') || 0;
+        } catch(e) {}
         highScoreElement.textContent = highScore;
 
-        // --- 核心功能 (挂载到 window 确保 HTML 里的 onclick 能找到) ---
+        // --- 核心全局功能 ---
 
         window.togglePause = function() {
             if (!hasStarted) return;
@@ -164,14 +169,17 @@
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         };
 
+        window.skipScore = function() { window.closeAllModals(); };
+
         window.showLeaderboard = async function() {
             const leaderboardList = document.getElementById('leaderboardList');
             leaderboardList.innerHTML = '<li class="empty-leaderboard">🎀 正在从云端获取...</li>';
+            
             overlay.style.display = 'block';
             document.getElementById('leaderboardModal').style.display = 'block';
 
             if (!db) {
-                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 数据库未连接</li>';
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 数据库加载失败，请检查配置或网络</li>';
                 return;
             }
 
@@ -179,7 +187,7 @@
                 const snapshot = await db.collection("scores").orderBy("score", "desc").limit(10).get();
                 leaderboardList.innerHTML = '';
                 if (snapshot.empty) {
-                    leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无云端记录</li>';
+                    leaderboardList.innerHTML = '<li class="empty-leaderboard">🌟 暂无记录</li>';
                     return;
                 }
                 snapshot.forEach((doc, index) => {
@@ -191,7 +199,9 @@
                     li.innerHTML = `<span class="player-rank">${medal}</span><div class="player-info"><div class="player-name">${data.name}</div><div class="player-date">${date}</div></div><span class="player-score">${data.score}分</span>`;
                     leaderboardList.appendChild(li);
                 });
-            } catch (error) { leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 加载失败</li>'; }
+            } catch (error) {
+                leaderboardList.innerHTML = '<li class="empty-leaderboard">❌ 获取失败，请重试</li>';
+            }
         };
 
         window.submitScore = async function() {
@@ -212,13 +222,11 @@
                 document.getElementById('nameInputModal').style.display = 'none';
                 window.showLeaderboard();
             } catch (error) {
-                alert("提交失败");
+                alert("提交失败，请检查网络（如果是国内用户，可能需要科学上网访问 Firebase）");
                 btn.disabled = false;
                 btn.textContent = '✨ 提交';
             }
         };
-
-        window.skipScore = function() { window.closeAllModals(); };
 
         // --- 游戏内部逻辑 ---
 
